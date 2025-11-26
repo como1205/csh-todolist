@@ -327,14 +327,14 @@ API Style: REST API
 Authentication: JWT (jsonwebtoken)
 Password Hashing: bcrypt
 Validation: express-validator
-ORM: Prisma
+Database Driver: pg (node-postgres)
 ```
 
 **주요 라이브러리**:
 - `express`: 4.x
 - `jsonwebtoken`: JWT 인증
 - `bcrypt`: 비밀번호 해싱
-- `prisma`: ORM
+- `pg`: PostgreSQL 클라이언트 (직접 SQL 사용)
 - `express-validator`: 요청 검증
 - `cors`: CORS 설정
 - `helmet`: 보안 헤더
@@ -345,14 +345,16 @@ ORM: Prisma
 ```
 Database: PostgreSQL 15+
 Hosting: Supabase
-ORM: Prisma
+Driver: pg (node-postgres)
+Query Style: Raw SQL with Prepared Statements
 ```
 
 **데이터베이스 기능**:
 - 트랜잭션 지원
+- Prepared Statements (SQL Injection 방지)
 - 인덱싱 최적화
 - 자동 백업 (Supabase)
-- Connection Pooling
+- Connection Pooling (pg Pool)
 
 ### 7.4 배포 및 인프라
 
@@ -493,63 +495,72 @@ Version Control: Git
 - PRIMARY KEY: holidayId
 - INDEX: date (날짜 기준 조회)
 
-### 8.3 Prisma 스키마 예시
+### 8.3 SQL 스키마 예시
 
-```prisma
-model User {
-  userId    String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  username  String
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  todos     Todo[]
+```sql
+-- Users 테이블
+CREATE TABLE users (
+  "userId"    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email       VARCHAR(255) UNIQUE NOT NULL,
+  password    VARCHAR(255) NOT NULL,
+  username    VARCHAR(100) NOT NULL,
+  role        VARCHAR(10) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+  "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
-  @@index([role])
-}
+CREATE INDEX idx_users_role ON users(role);
 
-model Todo {
-  todoId      String    @id @default(uuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  title       String
-  content     String?
-  startDate   DateTime?
-  dueDate     DateTime?
-  status      TodoStatus @default(ACTIVE)
-  isCompleted Boolean    @default(false)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  deletedAt   DateTime?
+-- Todos 테이블
+CREATE TABLE todos (
+  "todoId"      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "userId"      UUID NOT NULL REFERENCES users("userId") ON DELETE CASCADE,
+  title         VARCHAR(200) NOT NULL,
+  content       TEXT,
+  "startDate"   DATE,
+  "dueDate"     DATE,
+  status        VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'deleted')),
+  "isCompleted" BOOLEAN NOT NULL DEFAULT FALSE,
+  "createdAt"   TIMESTAMP NOT NULL DEFAULT NOW(),
+  "updatedAt"   TIMESTAMP NOT NULL DEFAULT NOW(),
+  "deletedAt"   TIMESTAMP,
+  CONSTRAINT chk_date_range CHECK ("dueDate" IS NULL OR "startDate" IS NULL OR "dueDate" >= "startDate")
+);
 
-  @@index([userId, status])
-  @@index([dueDate])
-  @@index([deletedAt])
-}
+CREATE INDEX idx_todos_user_status ON todos("userId", status);
+CREATE INDEX idx_todos_duedate ON todos("dueDate");
+CREATE INDEX idx_todos_deletedat ON todos("deletedAt");
 
-model Holiday {
-  holidayId   String   @id @default(uuid())
-  title       String
-  date        DateTime
-  description String?
-  isRecurring Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+-- Holidays 테이블
+CREATE TABLE holidays (
+  "holidayId"   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title         VARCHAR(100) NOT NULL,
+  date          DATE NOT NULL,
+  description   TEXT,
+  "isRecurring" BOOLEAN NOT NULL DEFAULT TRUE,
+  "createdAt"   TIMESTAMP NOT NULL DEFAULT NOW(),
+  "updatedAt"   TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
-  @@index([date])
-}
+CREATE INDEX idx_holidays_date ON holidays(date);
 
-enum Role {
-  USER
-  ADMIN
-}
+-- updatedAt 자동 업데이트 트리거
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW."updatedAt" = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-enum TodoStatus {
-  ACTIVE
-  COMPLETED
-  DELETED
-}
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_todos_updated_at BEFORE UPDATE ON todos
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_holidays_updated_at BEFORE UPDATE ON holidays
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ---

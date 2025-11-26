@@ -18,7 +18,7 @@
 4. [관계 설명](#4-관계-설명)
 5. [인덱스 전략](#5-인덱스-전략)
 6. [제약조건](#6-제약조건)
-7. [Prisma 스키마](#7-prisma-스키마)
+7. [데이터베이스 스키마 (SQL)](#7-데이터베이스-스키마-sql)
 8. [비즈니스 규칙](#8-비즈니스-규칙)
 
 ---
@@ -33,7 +33,7 @@
 
 - **DBMS**: PostgreSQL 15+
 - **호스팅**: Supabase
-- **ORM**: Prisma
+- **Driver**: pg (node-postgres)
 - **주요 특징**:
   - UUID 기반 Primary Key
   - 소프트 삭제 지원 (Soft Delete)
@@ -314,10 +314,10 @@ erDiagram
 **쿼리 예시**:
 ```sql
 -- 특정 사용자의 모든 활성 할일 조회
-SELECT * FROM Todo
-WHERE userId = '550e8400-e29b-41d4-a716-446655440000'
+SELECT * FROM todos
+WHERE "userId" = '550e8400-e29b-41d4-a716-446655440000'
   AND status = 'active'
-ORDER BY dueDate ASC;
+ORDER BY "dueDate" ASC;
 ```
 
 ### 4.2 Holiday (독립 엔티티)
@@ -335,7 +335,7 @@ ORDER BY dueDate ASC;
 **쿼리 예시**:
 ```sql
 -- 2025년 모든 국경일 조회
-SELECT * FROM Holiday
+SELECT * FROM holidays
 WHERE EXTRACT(YEAR FROM date) = 2025
 ORDER BY date ASC;
 ```
@@ -355,10 +355,10 @@ ORDER BY date ASC;
 **쿼리 최적화 예시**:
 ```sql
 -- 인덱스 활용: UK_User_email
-SELECT * FROM User WHERE email = 'user@example.com'; -- O(log n)
+SELECT * FROM users WHERE email = 'user@example.com'; -- O(log n)
 
 -- 인덱스 활용: IX_User_role
-SELECT * FROM User WHERE role = 'admin'; -- O(log n)
+SELECT * FROM users WHERE role = 'admin'; -- O(log n)
 ```
 
 ### 5.2 Todo 테이블 인덱스
@@ -373,17 +373,17 @@ SELECT * FROM User WHERE role = 'admin'; -- O(log n)
 **쿼리 최적화 예시**:
 ```sql
 -- 인덱스 활용: IX_Todo_userId_status (복합 인덱스)
-SELECT * FROM Todo
-WHERE userId = '...' AND status = 'active'; -- 매우 빠름
+SELECT * FROM todos
+WHERE "userId" = '...' AND status = 'active'; -- 매우 빠름
 
 -- 인덱스 활용: IX_Todo_dueDate
-SELECT * FROM Todo
-WHERE userId = '...'
-ORDER BY dueDate ASC; -- 정렬 최적화
+SELECT * FROM todos
+WHERE "userId" = '...'
+ORDER BY "dueDate" ASC; -- 정렬 최적화
 
 -- 인덱스 활용: IX_Todo_deletedAt
-SELECT * FROM Todo
-WHERE userId = '...' AND deletedAt IS NOT NULL; -- 휴지통 조회
+SELECT * FROM todos
+WHERE "userId" = '...' AND "deletedAt" IS NOT NULL; -- 휴지통 조회
 ```
 
 ### 5.3 Holiday 테이블 인덱스
@@ -396,7 +396,7 @@ WHERE userId = '...' AND deletedAt IS NOT NULL; -- 휴지통 조회
 **쿼리 최적화 예시**:
 ```sql
 -- 인덱스 활용: IX_Holiday_date
-SELECT * FROM Holiday
+SELECT * FROM holidays
 WHERE date >= '2025-01-01' AND date < '2026-01-01'
 ORDER BY date ASC; -- 빠른 범위 검색
 ```
@@ -445,9 +445,9 @@ ORDER BY date ASC; -- 빠른 범위 검색
 
 **SQL 제약조건 예시**:
 ```sql
-ALTER TABLE Todo
+ALTER TABLE todos
 ADD CONSTRAINT CHK_Todo_DateRange
-CHECK (dueDate IS NULL OR startDate IS NULL OR dueDate >= startDate);
+CHECK ("dueDate" IS NULL OR "startDate" IS NULL OR "dueDate" >= "startDate");
 ```
 
 ### 6.5 Not Null 제약조건
@@ -478,114 +478,130 @@ CHECK (dueDate IS NULL OR startDate IS NULL OR dueDate >= startDate);
 
 ---
 
-## 7. Prisma 스키마
+## 7. 데이터베이스 스키마 (SQL)
 
-### 7.1 완전한 Prisma Schema
+### 7.1 SQL Schema
 
-```prisma
-// schema.prisma
+```sql
+-- ============================================
+-- User 테이블
+-- ============================================
+CREATE TABLE users (
+  "userId"    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "email"     VARCHAR(255) UNIQUE NOT NULL,
+  "password"  VARCHAR(255) NOT NULL,
+  "username"  VARCHAR(100) NOT NULL,
+  "role"      VARCHAR(10) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+  "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
-generator client {
-  provider = "prisma-client-js"
-}
+CREATE INDEX "IX_User_role" ON users(role);
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+-- ============================================
+-- Todo 테이블
+-- ============================================
+CREATE TABLE todos (
+  "todoId"      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "userId"      UUID NOT NULL REFERENCES users("userId") ON DELETE CASCADE,
+  "title"       VARCHAR(200) NOT NULL,
+  "content"     TEXT,
+  "startDate"   DATE,
+  "dueDate"     DATE,
+  "status"      VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'deleted')),
+  "isCompleted" BOOLEAN NOT NULL DEFAULT FALSE,
+  "createdAt"   TIMESTAMP NOT NULL DEFAULT NOW(),
+  "updatedAt"   TIMESTAMP NOT NULL DEFAULT NOW(),
+  "deletedAt"   TIMESTAMP,
+  CONSTRAINT "CHK_Todo_DateRange" CHECK ("dueDate" IS NULL OR "startDate" IS NULL OR "dueDate" >= "startDate")
+);
 
-// ============================================
-// User 모델
-// ============================================
-model User {
-  userId    String   @id @default(uuid()) @db.Uuid
-  email     String   @unique @db.VarChar(255)
-  password  String   @db.VarChar(255)
-  username  String   @db.VarChar(100)
-  role      Role     @default(USER)
-  createdAt DateTime @default(now()) @db.Timestamp(6)
-  updatedAt DateTime @updatedAt @db.Timestamp(6)
+CREATE INDEX "IX_Todo_userId_status" ON todos("userId", "status");
+CREATE INDEX "IX_Todo_dueDate" ON todos("dueDate");
+CREATE INDEX "IX_Todo_deletedAt" ON todos("deletedAt");
 
-  // Relation
-  todos     Todo[]
+-- ============================================
+-- Holiday 테이블
+-- ============================================
+CREATE TABLE holidays (
+  "holidayId"   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "title"       VARCHAR(100) NOT NULL,
+  "date"        DATE NOT NULL,
+  "description" TEXT,
+  "isRecurring" BOOLEAN NOT NULL DEFAULT TRUE,
+  "createdAt"   TIMESTAMP NOT NULL DEFAULT NOW(),
+  "updatedAt"   TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
-  @@index([role], name: "IX_User_role")
-  @@map("users")
-}
+CREATE INDEX "IX_Holiday_date" ON holidays(date);
 
-// ============================================
-// Todo 모델
-// ============================================
-model Todo {
-  todoId      String     @id @default(uuid()) @db.Uuid
-  userId      String     @db.Uuid
-  title       String     @db.VarChar(200)
-  content     String?    @db.Text
-  startDate   DateTime?  @db.Date
-  dueDate     DateTime?  @db.Date
-  status      TodoStatus @default(ACTIVE)
-  isCompleted Boolean    @default(false)
-  createdAt   DateTime   @default(now()) @db.Timestamp(6)
-  updatedAt   DateTime   @updatedAt @db.Timestamp(6)
-  deletedAt   DateTime?  @db.Timestamp(6)
+-- ============================================
+-- Triggers for updatedAt
+-- ============================================
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW."updatedAt" = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-  // Relation
-  user        User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-  @@index([userId, status], name: "IX_Todo_userId_status")
-  @@index([dueDate], name: "IX_Todo_dueDate")
-  @@index([deletedAt], name: "IX_Todo_deletedAt")
-  @@map("todos")
-}
+CREATE TRIGGER update_todos_updated_at BEFORE UPDATE ON todos
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-// ============================================
-// Holiday 모델
-// ============================================
-model Holiday {
-  holidayId   String   @id @default(uuid()) @db.Uuid
-  title       String   @db.VarChar(100)
-  date        DateTime @db.Date
-  description String?  @db.Text
-  isRecurring Boolean  @default(true)
-  createdAt   DateTime @default(now()) @db.Timestamp(6)
-  updatedAt   DateTime @updatedAt @db.Timestamp(6)
-
-  @@index([date], name: "IX_Holiday_date")
-  @@map("holidays")
-}
-
-// ============================================
-// Enums
-// ============================================
-enum Role {
-  USER
-  ADMIN
-}
-
-enum TodoStatus {
-  ACTIVE
-  COMPLETED
-  DELETED
-}
+CREATE TRIGGER update_holidays_updated_at BEFORE UPDATE ON holidays
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
-### 7.2 Prisma 마이그레이션 명령어
+### 7.2 데이터베이스 마이그레이션
+
+#### psql을 사용한 스키마 적용
 
 ```bash
-# Prisma 초기화
-npx prisma init
+# PostgreSQL 데이터베이스 접속
+psql -h <HOST> -p <PORT> -U <USERNAME> -d <DATABASE>
 
-# 마이그레이션 생성
-npx prisma migrate dev --name init
+# SQL 파일 실행
+\i schema.sql
 
-# 마이그레이션 적용
-npx prisma migrate deploy
+# 또는 직접 실행
+psql -h <HOST> -p <PORT> -U <USERNAME> -d <DATABASE> -f schema.sql
+```
 
-# Prisma Client 생성
-npx prisma generate
+#### Supabase SQL Editor 사용
 
-# Prisma Studio 실행 (DB GUI)
-npx prisma studio
+1. Supabase 대시보드 접속
+2. SQL Editor 탭 클릭
+3. 위 SQL 스키마 붙여넣기
+4. "Run" 버튼 클릭하여 실행
+
+#### node-postgres를 사용한 마이그레이션 스크립트 예시
+
+```javascript
+// migrate.js
+const { Pool } = require('pg');
+const fs = require('fs');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+async function migrate() {
+  try {
+    const sql = fs.readFileSync('./schema.sql', 'utf8');
+    await pool.query(sql);
+    console.log('마이그레이션 완료');
+  } catch (error) {
+    console.error('마이그레이션 실패:', error);
+  } finally {
+    await pool.end();
+  }
+}
+
+migrate();
 ```
 
 ### 7.3 환경 변수 설정
@@ -619,8 +635,8 @@ DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
 |-----------|------|-----------|
 | [BR-05] | 할일 삭제 시 휴지통으로 이동 (소프트 삭제) | status='deleted', deletedAt 기록 |
 | [BR-06] | 휴지통의 할일은 복원 가능 | status='active', deletedAt=null 변경 |
-| [BR-07] | 영구 삭제 시 DB에서 완전히 제거 | DELETE FROM Todo WHERE ... |
-| [BR-08] | 할일 완료 시 isCompleted=true, status='completed' | UPDATE Todo SET isCompleted=true, status='completed' |
+| [BR-07] | 영구 삭제 시 DB에서 완전히 제거 | DELETE FROM todos WHERE ... |
+| [BR-08] | 할일 완료 시 isCompleted=true, status='completed' | UPDATE todos SET "isCompleted"=true, status='completed' |
 | [BR-12] | 만료일(dueDate)은 시작일(startDate)과 같거나 이후여야 함 | CHECK 제약조건 또는 애플리케이션 검증 |
 | [BR-13] | 만료일 지난 할일은 UI에서 시각적 구분 | 프론트엔드에서 현재 날짜와 비교하여 표시 |
 
@@ -652,39 +668,39 @@ DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
 #### A.1 사용자별 활성 할일 조회 (정렬)
 
 ```sql
-SELECT todoId, title, startDate, dueDate, status, isCompleted
-FROM Todo
-WHERE userId = '550e8400-e29b-41d4-a716-446655440000'
+SELECT "todoId", title, "startDate", "dueDate", status, "isCompleted"
+FROM todos
+WHERE "userId" = '550e8400-e29b-41d4-a716-446655440000'
   AND status = 'active'
-ORDER BY dueDate ASC NULLS LAST;
+ORDER BY "dueDate" ASC NULLS LAST;
 ```
 
 #### A.2 휴지통 조회
 
 ```sql
-SELECT todoId, title, deletedAt
-FROM Todo
-WHERE userId = '550e8400-e29b-41d4-a716-446655440000'
+SELECT "todoId", title, "deletedAt"
+FROM todos
+WHERE "userId" = '550e8400-e29b-41d4-a716-446655440000'
   AND status = 'deleted'
-ORDER BY deletedAt DESC;
+ORDER BY "deletedAt" DESC;
 ```
 
 #### A.3 만료일 지난 할일 조회
 
 ```sql
-SELECT todoId, title, dueDate
-FROM Todo
-WHERE userId = '550e8400-e29b-41d4-a716-446655440000'
+SELECT "todoId", title, "dueDate"
+FROM todos
+WHERE "userId" = '550e8400-e29b-41d4-a716-446655440000'
   AND status = 'active'
-  AND dueDate < CURRENT_DATE
-ORDER BY dueDate ASC;
+  AND "dueDate" < CURRENT_DATE
+ORDER BY "dueDate" ASC;
 ```
 
 #### A.4 특정 연도 국경일 조회
 
 ```sql
-SELECT holidayId, title, date, description
-FROM Holiday
+SELECT "holidayId", title, date, description
+FROM holidays
 WHERE EXTRACT(YEAR FROM date) = 2025
 ORDER BY date ASC;
 ```

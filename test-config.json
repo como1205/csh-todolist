@@ -1,0 +1,23 @@
+{
+  "tools": {
+    "pg_get_setup_instructions": {"enabled": true},
+    "pg_execute_query": {"enabled": true},
+    "pg_execute_mutation": {"enabled": true},
+    "pg_execute_sql": {"enabled": true},
+    "pg_manage_schema": {"enabled": true},
+    "pg_manage_users": {"enabled": true},
+    "pg_manage_constraints": {"enabled": true},
+    "pg_manage_indexes": {"enabled": true},
+    "pg_manage_functions": {"enabled": true},
+    "pg_manage_triggers": {"enabled": true},
+    "pg_manage_comments": {"enabled": true},
+    "pg_manage_query": {"enabled": true},
+    "pg_manage_rls": {"enabled": true},
+    "pg_analyze_database": {"enabled": true},
+    "pg_debug_database": {"enabled": true},
+    "pg_monitor_database": {"enabled": true},
+    "pg_export_table_data": {"enabled": true},
+    "pg_import_table_data": {"enabled": true},
+    "pg_copy_between_databases": {"enabled": true}
+  }
+}

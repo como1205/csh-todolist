@@ -43,7 +43,7 @@ graph TB
 
     A -->|HTTPS| B
     B -->|REST API<br/>JWT Auth| C
-    C -->|Prisma ORM<br/>SQL Queries| D
+    C -->|pg (PostgreSQL Driver)<br/>SQL Queries| D
 
     style A fill:#E3F2FD
     style B fill:#FFF3E0
@@ -55,7 +55,7 @@ graph TB
 - **클라이언트**: 데스크톱 및 모바일 웹 브라우저 지원
 - **프론트엔드**: React 18 기반 SPA, Zustand 상태 관리
 - **백엔드**: Express.js 기반 RESTful API, JWT 인증
-- **데이터베이스**: PostgreSQL 15, Prisma ORM 사용
+- **데이터베이스**: PostgreSQL 15, pg (node-postgres) 사용
 - **배포**: Vercel (프론트/백엔드), Supabase (DB)
 
 ---
@@ -145,7 +145,7 @@ graph TB
 
 ## 3. 백엔드 아키텍처
 
-백엔드는 Express.js 기반의 RESTful API 서버로, 미들웨어 체인을 통한 요청 처리와 Prisma ORM을 통한 데이터베이스 접근을 구현합니다.
+백엔드는 Express.js 기반의 RESTful API 서버로, 미들웨어 체인을 통한 요청 처리와 pg (node-postgres)를 통한 데이터베이스 접근을 구현합니다.
 
 ```mermaid
 graph TB
@@ -185,10 +185,10 @@ graph TB
         end
 
         subgraph "Data Access Layer"
-            F[Prisma Client]
-            F1[User Model]
-            F2[Todo Model]
-            F3[Holiday Model]
+            F[pg Pool]
+            F1[User Queries]
+            F2[Todo Queries]
+            F3[Holiday Queries]
         end
 
         subgraph "Validation"
@@ -227,7 +227,7 @@ graph TB
 2. **Routes**: RESTful API 엔드포인트 정의
 3. **Controllers**: 요청 처리 및 응답 관리
 4. **Services**: 비즈니스 로직 구현
-5. **Data Access**: Prisma ORM을 통한 DB 접근
+5. **Data Access**: pg Pool을 통한 DB 접근
 6. **Validation**: express-validator를 통한 요청 검증
 
 **보안 계층**:
@@ -250,7 +250,7 @@ sequenceDiagram
     participant Z as Zustand Store
     participant A as Axios Client
     participant E as Express API
-    participant P as Prisma ORM
+    participant P as pg Pool
     participant D as PostgreSQL DB
 
     Note over U,D: 할일 생성 흐름
@@ -262,7 +262,7 @@ sequenceDiagram
     A->>E: 5. HTTP Request
     E->>E: 6. JWT 토큰 검증
     E->>E: 7. express-validator 검증
-    E->>P: 8. todo.create()
+    E->>P: 8. pool.query(INSERT)
     P->>D: 9. INSERT SQL Query
     D-->>P: 10. 생성된 Todo
     P-->>E: 11. Todo Object
@@ -277,7 +277,7 @@ sequenceDiagram
     F->>A: 17. GET /api/todos
     A->>E: 18. HTTP Request
     E->>E: 19. JWT 검증
-    E->>P: 20. todo.findMany()
+    E->>P: 20. pool.query(SELECT)
     P->>D: 21. SELECT SQL Query
     D-->>P: 22. Todo List
     P-->>E: 23. Todo Array
@@ -292,9 +292,9 @@ sequenceDiagram
 2. **네트워크 전송**: Axios with JWT
 3. **서버 검증**: express-validator
 4. **비즈니스 로직**: Service Layer
-5. **데이터 접근**: Prisma ORM
+5. **데이터 접근**: pg Pool
 6. **데이터베이스**: PostgreSQL
-7. **응답 전파**: DB → Prisma → API → Store → UI
+7. **응답 전파**: DB → pg Pool → API → Store → UI
 
 ---
 
@@ -424,7 +424,7 @@ graph TB
     B --> D
     D --> D1 & D2 & D3 & D4
     D --> E
-    D -->|Prisma Client<br/>Connection String| G
+    D -->|pg Pool<br/>Connection String| G
     G --> F
     F --> H
     F --> I
@@ -458,7 +458,7 @@ graph TB
 
 ### 6.3 데이터베이스 (Supabase)
 - **DB**: PostgreSQL 15
-- **Connection**: Prisma Client + Connection Pooling
+- **Connection**: pg Pool + Connection Pooling (PgBouncer)
 - **백업**: 일일 자동 백업
 - **모니터링**: Supabase Dashboard
 - **보안**: SSL/TLS 연결, IP 화이트리스트 (선택)
@@ -475,7 +475,7 @@ graph TB
 2. GitHub Actions가 자동으로 빌드 및 테스트
 3. Vercel이 자동으로 배포 감지 및 실행
 4. 프론트엔드는 CDN으로, 백엔드는 Serverless로 배포
-5. Supabase DB는 Prisma를 통해 연결
+5. Supabase DB는 pg Pool을 통해 연결
 
 ---
 
@@ -556,7 +556,7 @@ graph LR
     subgraph "Backend"
         B1[Node.js 18+]
         B2[Express.js 4]
-        B3[Prisma ORM]
+        B3[pg (node-postgres)]
         B4[JWT]
         B5[bcrypt]
         B6[express-validator]
@@ -600,7 +600,7 @@ graph TB
         B3[Rate Limiting<br/>100 req/min]
         B4[JWT Authentication<br/>Bearer Token]
         B5[Input Validation<br/>express-validator]
-        B6[SQL Injection Defense<br/>Prisma Prepared Statements]
+        B6[SQL Injection Defense<br/>Prepared Statements (pg)]
         B7[XSS Defense<br/>Input Sanitization]
         B8[Password Hashing<br/>bcrypt salt 10]
     end
@@ -624,7 +624,7 @@ graph TB
 **백엔드**:
 - 데이터베이스 인덱싱
 - Connection Pooling (PgBouncer)
-- 쿼리 최적화 (Prisma)
+- 쿼리 최적화 (Prepared Statements)
 - API Response Caching (선택)
 
 **목표 성능**:

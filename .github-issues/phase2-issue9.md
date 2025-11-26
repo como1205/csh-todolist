@@ -74,41 +74,40 @@ src/
     └── auth.middleware.ts      # authenticate, requireAdmin
 ```
 
-**Prisma 쿼리 예시**:
+**pg (node-postgres) 쿼리 예시**:
 ```typescript
 // 휴지통 목록 조회
-const trashedTodos = await prisma.todo.findMany({
-  where: {
-    userId: req.user!.userId,
-    isDeleted: true,
-  },
-  orderBy: {
-    deletedAt: 'desc',
-  },
-});
+const { rows } = await pool.query(
+  `SELECT "todoId", title, "deletedAt", "createdAt", "updatedAt"
+   FROM todos
+   WHERE "userId" = $1 AND status = 'deleted'
+   ORDER BY "deletedAt" DESC`,
+  [req.user!.userId]
+);
 
 // 할일 영구 삭제 (hard delete)
-await prisma.todo.delete({
-  where: { id },
-});
+const result = await pool.query(
+  `DELETE FROM todos
+   WHERE "todoId" = $1 AND "userId" = $2`,
+  [id, req.user!.userId]
+);
 
 // 국경일 목록 조회 (특정 년도)
-const holidays = await prisma.holiday.findMany({
-  where: {
-    date: {
-      gte: new Date(`${year}-01-01`),
-      lt: new Date(`${year + 1}-01-01`),
-    },
-  },
-  orderBy: {
-    date: 'asc',
-  },
-});
+const { rows } = await pool.query(
+  `SELECT "holidayId", title, date, description, "isRecurring"
+   FROM holidays
+   WHERE EXTRACT(YEAR FROM date) = $1
+   ORDER BY date ASC`,
+  [year]
+);
 
 // 국경일 생성
-const holiday = await prisma.holiday.create({
-  data: { date, name },
-});
+const { rows } = await pool.query(
+  `INSERT INTO holidays (title, date, description, "isRecurring")
+   VALUES ($1, $2, $3, $4)
+   RETURNING "holidayId", title, date, description`,
+  [title, date, description, isRecurring]
+);
 ```
 
 **미들웨어 적용 예시**:
@@ -137,7 +136,7 @@ router.delete('/holidays/:id', authenticate, requireAdmin, holidayController.del
 ## 🔗 의존성
 
 **선행 작업**:
-- Task 1.4: Prisma 스키마 정의 및 마이그레이션
+- Task 1.4: 데이터베이스 스키마 정의 및 마이그레이션
 - Task 2.3: API 인증 미들웨어 구현
 
 **후행 작업**:
@@ -151,5 +150,5 @@ router.delete('/holidays/:id', authenticate, requireAdmin, holidayController.del
 ## 📚 참고 문서
 
 - docs/3-prd.md (9.3장: 휴지통 API, 9.4장: 국경일 API)
-- Prisma Delete: https://www.prisma.io/docs/concepts/components/prisma-client/crud#delete
+- pg (node-postgres) 문서: https://node-postgres.com/
 - Express 미들웨어 체이닝: https://expressjs.com/en/guide/using-middleware.html

@@ -66,51 +66,47 @@ src/
 ├── controllers/
 │   └── todos.controller.ts     # 요청/응답 처리
 ├── services/
-│   └── todos.service.ts        # 비즈니스 로직 (Prisma 사용)
+│   └── todos.service.ts        # 비즈니스 로직 (pg 사용)
 └── middlewares/
     └── auth.middleware.ts      # 인증 미들웨어 (적용)
 ```
 
-**Prisma 쿼리 예시**:
+**pg (node-postgres) 쿼리 예시**:
 ```typescript
 // 할일 목록 조회 (현재 사용자, 삭제되지 않은 것만)
-const todos = await prisma.todo.findMany({
-  where: {
-    userId: req.user!.userId,
-    isDeleted: false,
-  },
-  orderBy: {
-    createdAt: 'desc',
-  },
-});
+const { rows } = await pool.query(
+  `SELECT "todoId", title, content, "startDate", "dueDate", status, "isCompleted", "createdAt", "updatedAt", "deletedAt"
+   FROM todos
+   WHERE "userId" = $1 AND status != 'deleted'
+   ORDER BY "createdAt" DESC`,
+  [req.user!.userId]
+);
 
 // 할일 생성
-const todo = await prisma.todo.create({
-  data: {
-    title,
-    description,
-    dueDate,
-    userId: req.user!.userId,
-  },
-});
+const { rows } = await pool.query(
+  `INSERT INTO todos ("userId", title, content, "startDate", "dueDate")
+   VALUES ($1, $2, $3, $4, $5)
+   RETURNING "todoId", title, content, "startDate", "dueDate", status, "isCompleted", "createdAt", "updatedAt"`,
+  [req.user!.userId, title, content, startDate, dueDate]
+);
 
 // 할일 완료 토글
-const todo = await prisma.todo.update({
-  where: { id },
-  data: {
-    isCompleted: !currentTodo.isCompleted,
-    status: !currentTodo.isCompleted ? 'completed' : 'pending',
-  },
-});
+const { rows } = await pool.query(
+  `UPDATE todos
+   SET "isCompleted" = $1, status = $2, "updatedAt" = NOW()
+   WHERE "todoId" = $3 AND "userId" = $4
+   RETURNING "todoId", title, "isCompleted", status`,
+  [!currentTodo.isCompleted, !currentTodo.isCompleted ? 'completed' : 'active', id, req.user!.userId]
+);
 
 // 할일 삭제 (soft delete)
-const todo = await prisma.todo.update({
-  where: { id },
-  data: {
-    isDeleted: true,
-    deletedAt: new Date(),
-  },
-});
+const { rows } = await pool.query(
+  `UPDATE todos
+   SET status = 'deleted', "deletedAt" = NOW(), "updatedAt" = NOW()
+   WHERE "todoId" = $1 AND "userId" = $2
+   RETURNING "todoId", title, status, "deletedAt"`,
+  [id, req.user!.userId]
+);
 ```
 
 **유효성 검사**:
@@ -128,7 +124,7 @@ const todo = await prisma.todo.update({
 ## 🔗 의존성
 
 **선행 작업**:
-- Task 1.4: Prisma 스키마 정의 및 마이그레이션
+- Task 1.4: 데이터베이스 스키마 정의 및 마이그레이션
 - Task 2.3: API 인증 미들웨어 구현
 
 **후행 작업**:
@@ -142,5 +138,5 @@ const todo = await prisma.todo.update({
 ## 📚 참고 문서
 
 - docs/3-prd.md (9.2장: 할일 API)
-- Prisma CRUD: https://www.prisma.io/docs/concepts/components/prisma-client/crud
+- pg (node-postgres) 문서: https://node-postgres.com/
 - Express 라우팅: https://expressjs.com/en/guide/routing.html

@@ -17,12 +17,12 @@
 **Task 1.1: 백엔드 프로젝트 초기화**
 
 - **담당**: `backend-developer`
-- **설명**: Express.js, Prisma, TypeScript 기반의 백엔드 프로젝트를 설정합니다.
+- **설명**: Express.js, pg, TypeScript 기반의 백엔드 프로젝트를 설정합니다.
 - ✅ **완료 조건**:
   - [ ] `npm init` 및 `package.json` 설정 완료
-  - [ ] Express, Prisma, TypeScript, ts-node 등 핵심 라이브러리 설치 완료
+  - [ ] Express, pg, @types/pg, TypeScript, ts-node 등 핵심 라이브러리 설치 완료
   - [ ] `tsconfig.json` 파일 설정 완료
-  - [ ] Prisma 초기화 (`npx prisma init`) 완료
+  - [ ] pg Pool 연결 설정을 위한 `.env` 파일 준비
 - 🔗 **의존성**: 없음
 
 **Task 1.2: 프론트엔드 프로젝트 초기화**
@@ -46,15 +46,15 @@
   - [ ] 확보된 URL을 백엔드 프로젝트의 `.env` 파일에 `DATABASE_URL`로 저장
 - 🔗 **의존성**: 없음 (Task 1.1, 1.2와 병렬 진행 가능)
 
-**Task 1.4: Prisma 스키마 정의 및 마이그레이션**
+**Task 1.4: 데이터베이스 스키마 생성 및 마이그레이션**
 
 - **담당**: `backend-developer`
-- **설명**: `PRD 8장`의 데이터 모델을 `prisma/schema.prisma` 파일에 정의하고, `prisma migrate`를 실행하여 Supabase DB에 적용합니다.
+- **설명**: `PRD 8장`의 데이터 모델을 SQL 스크립트로 작성하고, Supabase SQL Editor 또는 psql을 통해 DB에 적용합니다.
 - ✅ **완료 조건**:
-  - [ ] `schema.prisma` 파일에 `User`, `Todo`, `Holiday` 모델 및 관계 정의 완료
-  - [ ] `prisma migrate dev` 실행 성공 및 마이그레이션 히스토리 생성
-  - [ ] Supabase DB에 테이블 및 필드 생성 확인
-  - [ ] 타입이 적용된 Prisma Client 생성 확인
+  - [ ] `database/schema.sql` 파일에 `users`, `todos`, `holidays` 테이블 DDL 작성 완료
+  - [ ] SQL 스크립트에 테이블 간 외래 키 관계(Foreign Key) 정의 완료
+  - [ ] Supabase SQL Editor 또는 psql을 사용하여 스크립트 실행 완료
+  - [ ] Supabase DB에 테이블, 컬럼, 인덱스, 제약조건 생성 확인
 - 🔗 **의존성**: **Task 1.1**, **Task 1.3**
 
 ---
@@ -78,9 +78,10 @@
 - **담당**: `backend-developer`
 - **설명**: 회원가입, 로그인, 토큰 갱신 API를 구현합니다.
 - ✅ **완료 조건**:
-  - [ ] `POST /api/auth/register`: 사용자 생성 및 `bcrypt` 해싱 처리
-  - [ ] `POST /api/auth/login`: 사용자 검증 및 JWT(Access/Refresh Token) 발급
+  - [ ] `POST /api/auth/register`: pg Pool을 사용한 INSERT 쿼리로 사용자 생성 및 `bcrypt` 해싱 처리
+  - [ ] `POST /api/auth/login`: SELECT 쿼리로 사용자 검증 및 JWT(Access/Refresh Token) 발급
   - [ ] `POST /api/auth/refresh`: Refresh Token 검증 및 새 Access Token 발급
+  - [ ] Prepared Statement 사용하여 SQL Injection 방지
 - 🔗 **의존성**: **Task 1.4**, **Task 2.1**
 
 **Task 2.3: API 인증 미들웨어 구현**
@@ -98,8 +99,14 @@
 - **담당**: `backend-developer`
 - **설명**: 할일의 CRUD, 상태 변경(완료, 복원, 삭제) API를 모두 구현합니다.
 - ✅ **완료 조건**:
-  - [ ] `GET /api/todos`, `POST /api/todos`, `GET /api/todos/:id`, `PUT /api/todos/:id` 구현
-  - [ ] `PATCH /api/todos/:id/complete`, `DELETE /api/todos/:id`, `PATCH /api/todos/:id/restore` 구현
+  - [ ] `GET /api/todos`: SELECT 쿼리로 할일 목록 조회 구현
+  - [ ] `POST /api/todos`: INSERT 쿼리로 할일 생성 구현
+  - [ ] `GET /api/todos/:id`: SELECT 쿼리로 특정 할일 조회 구현
+  - [ ] `PUT /api/todos/:id`: UPDATE 쿼리로 할일 수정 구현
+  - [ ] `PATCH /api/todos/:id/complete`: UPDATE 쿼리로 완료 상태 변경 구현
+  - [ ] `DELETE /api/todos/:id`: UPDATE 쿼리로 논리 삭제(deleted_at 설정) 구현
+  - [ ] `PATCH /api/todos/:id/restore`: UPDATE 쿼리로 복원(deleted_at NULL) 구현
+  - [ ] 모든 쿼리에 Prepared Statement 사용하여 SQL Injection 방지
   - [ ] 모든 API에 **Task 2.3**의 인증 미들웨어를 적용하여 '자신의 할일'만 접근하도록 처리
 - 🔗 **의존성**: **Task 1.4**, **Task 2.3**
 
@@ -108,8 +115,12 @@
 - **담당**: `backend-developer`
 - **설명**: 휴지통 조회/영구삭제 및 국경일 조회/관리 API를 구현합니다.
 - ✅ **완료 조건**:
-  - [ ] `GET /api/trash`, `DELETE /api/trash/:id` 구현 완료
-  - [ ] `GET /api/holidays` (전체 사용자용), `POST /api/holidays`, `PUT /api/holidays/:id` (관리자용) 구현
+  - [ ] `GET /api/trash`: SELECT 쿼리로 deleted_at이 NULL이 아닌 할일 조회 구현
+  - [ ] `DELETE /api/trash/:id`: DELETE 쿼리로 물리 삭제(영구삭제) 구현
+  - [ ] `GET /api/holidays`: SELECT 쿼리로 국경일 목록 조회 구현 (전체 사용자용)
+  - [ ] `POST /api/holidays`: INSERT 쿼리로 국경일 생성 구현 (관리자용)
+  - [ ] `PUT /api/holidays/:id`: UPDATE 쿼리로 국경일 수정 구현 (관리자용)
+  - [ ] 모든 쿼리에 Prepared Statement 사용하여 SQL Injection 방지
   - [ ] 국경일 관리 API에 관리자(`role='admin'`) 권한 확인 로직 적용
 - 🔗 **의존성**: **Task 1.4**, **Task 2.3**
 
