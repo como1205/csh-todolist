@@ -1,0 +1,38 @@
+<svg width="500" height="700" viewBox="0 0 500 700" xmlns="http://www.w3.org/2000/svg" style="font-family: 'Pretendard', sans-serif;">
+  <!-- 배경 -->
+  <rect width="100%" height="100%" fill="#f3f4f6"/>
+
+  <!-- 중앙 정렬 컨테이너 -->
+  <rect x="70" y="125" width="360" height="450" fill="white" rx="12" stroke="#e5e7eb" stroke-width="1"/>
+
+  <g text-anchor="middle">
+    <!-- 서비스 로고 -->
+    <text x="250" y="185" font-size="28" font-weight="bold" fill="#111827">csh-TodoList</text>
+
+    <!-- 페이지 제목 -->
+    <text x="250" y="225" font-size="18" fill="#374151">로그인</text>
+  </g>
+
+  <!-- 로그인 폼 -->
+  <g>
+    <!-- 이메일 필드 -->
+    <text x="100" y="270" font-size="14" font-weight="500" fill="#374151">이메일</text>
+    <rect x="100" y="280" width="300" height="40" fill="white" stroke="#d1d5db" rx="6"/>
+    <text x="110" y="306" font-size="14" fill="#9ca3af">이메일을 입력하세요</text>
+
+    <!-- 비밀번호 필드 -->
+    <text x="100" y="345" font-size="14" font-weight="500" fill="#374151">비밀번호</text>
+    <rect x="100" y="355" width="300" height="40" fill="white" stroke="#d1d5db" rx="6"/>
+    <text x="110" y="381" font-size="14" fill="#9ca3af">비밀번호를 입력하세요</text>
+
+    <!-- 로그인 버튼 -->
+    <rect x="100" y="420" width="300" height="45" fill="#00C73C" rx="6" style="cursor: pointer;"/>
+    <text x="250" y="448" font-size="16" font-weight="bold" fill="white" text-anchor="middle" style="cursor: pointer;">로그인</text>
+  </g>
+
+  <!-- 하단 링크 -->
+  <g text-anchor="middle" font-size="12" fill="#6b7280" style="cursor: pointer;">
+    <text x="250" y="495" text-decoration="underline">비밀번호 찾기</text>
+    <text x="250" y="520" text-decoration="underline">계정이 없으신가요? 회원가입</text>
+  </g>
+</svg>

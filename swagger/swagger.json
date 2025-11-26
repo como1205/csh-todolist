@@ -1,0 +1,529 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "csh-TodoList API",
+    "description": "API specification for the csh-TodoList application, a personal todo management service.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://your-domain.vercel.app/api",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Development server"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@example.com"
+          },
+          "username": {
+            "type": "string",
+            "example": "홍길동"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["user", "admin"],
+            "example": "user"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Todo": {
+        "type": "object",
+        "properties": {
+          "todoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "completed", "deleted"]
+          },
+          "isCompleted": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "Holiday": {
+        "type": "object",
+        "properties": {
+          "holidayId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "isRecurring": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["email", "password", "username"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
+      "RefreshTokenRequest": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        }
+      },
+      "AccessTokenResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          }
+        }
+      },
+      "TodoRequest": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "HolidayRequest": {
+        "type": "object",
+        "required": ["title", "date"],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isRecurring": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "UpdateProfileRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {"name": "Authentication", "description": "User authentication and authorization"},
+    {"name": "Todos", "description": "Operations related to Todos"},
+    {"name": "Trash", "description": "Operations for managing deleted Todos"},
+    {"name": "Holidays", "description": "Operations for managing holidays"},
+    {"name": "Users", "description": "Operations related to user profiles"}
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a new user",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User successfully registered",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+          },
+          "409": {
+            "description": "Email already exists",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Log in a user",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginResponse" } } }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Refresh an access token",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Access token refreshed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AccessTokenResponse" } } }
+          },
+          "401": {
+            "description": "Invalid refresh token"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+        "post": {
+            "tags": ["Authentication"],
+            "summary": "Log out a user",
+            "responses": {
+                "200": {"description": "Logout successful"}
+            }
+        }
+    },
+    "/todos": {
+      "get": {
+        "tags": ["Todos"],
+        "summary": "Get a list of todos",
+        "parameters": [
+          {"in": "query", "name": "status", "schema": {"type": "string", "enum": ["active", "completed", "deleted"]}},
+          {"in": "query", "name": "search", "schema": {"type": "string"}},
+          {"in": "query", "name": "sortBy", "schema": {"type": "string", "enum": ["dueDate", "createdAt"]}},
+          {"in": "query", "name": "order", "schema": {"type": "string", "enum": ["asc", "desc"]}}
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of todos",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Todo" } } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Todos"],
+        "summary": "Create a new todo",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TodoRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Todo created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Todo" } } }
+          }
+        }
+      }
+    },
+    "/todos/{id}": {
+        "get": {
+            "tags": ["Todos"],
+            "summary": "Get a specific todo by ID",
+            "parameters": [{"in": "path", "name": "id", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+            "responses": {
+                "200": {"description": "Todo details", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Todo" } } }},
+                "404": {"description": "Todo not found"}
+            }
+        },
+        "put": {
+            "tags": ["Todos"],
+            "summary": "Update a todo",
+            "parameters": [{"in": "path", "name": "id", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+            "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TodoRequest" } } } },
+            "responses": {
+                "200": {"description": "Todo updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Todo" } } }}
+            }
+        },
+        "delete": {
+            "tags": ["Todos"],
+            "summary": "Move a todo to the trash (soft delete)",
+            "parameters": [{"in": "path", "name": "id", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+            "responses": {
+                "200": {"description": "Todo moved to trash"}
+            }
+        }
+    },
+    "/todos/{id}/complete": {
+        "patch": {
+            "tags": ["Todos"],
+            "summary": "Mark a todo as complete",
+            "parameters": [{"in": "path", "name": "id", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+            "responses": {
+                "200": {"description": "Todo marked as complete"}
+            }
+        }
+    },
+    "/todos/{id}/restore": {
+        "patch": {
+            "tags": ["Todos"],
+            "summary": "Restore a todo from the trash",
+            "parameters": [{"in": "path", "name": "id", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+            "responses": {
+                "200": {"description": "Todo restored"}
+            }
+        }
+    },
+    "/trash": {
+        "get": {
+            "tags": ["Trash"],
+            "summary": "Get a list of todos in the trash",
+            "responses": {
+                "200": { "description": "List of deleted todos", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Todo" } } } } }
+            }
+        }
+    },
+    "/trash/{id}": {
+        "delete": {
+            "tags": ["Trash"],
+            "summary": "Permanently delete a todo",
+            "parameters": [{"in": "path", "name": "id", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+            "responses": {
+                "200": {"description": "Todo permanently deleted"}
+            }
+        }
+    },
+    "/holidays": {
+      "get": {
+        "tags": ["Holidays"],
+        "summary": "Get a list of holidays",
+        "security": [],
+        "parameters": [
+          {"in": "query", "name": "year", "schema": {"type": "integer"}},
+          {"in": "query", "name": "month", "schema": {"type": "integer"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of holidays",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Holiday" } } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Holidays"],
+        "summary": "Add a new holiday (Admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/HolidayRequest" } }
+          }
+        },
+        "responses": {
+          "201": { "description": "Holiday created" },
+          "403": { "description": "Admin access required" }
+        }
+      }
+    },
+    "/holidays/{id}": {
+        "put": {
+            "tags": ["Holidays"],
+            "summary": "Update a holiday (Admin only)",
+            "parameters": [{"in": "path", "name": "id", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+            "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HolidayRequest" } } } },
+            "responses": {
+                "200": {"description": "Holiday updated"},
+                "403": {"description": "Admin access required"}
+            }
+        }
+    },
+    "/users/me": {
+        "get": {
+            "tags": ["Users"],
+            "summary": "Get current user profile",
+            "responses": {
+                "200": { "description": "Current user profile", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } }
+            }
+        },
+        "patch": {
+            "tags": ["Users"],
+            "summary": "Update current user profile",
+            "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateProfileRequest" } } } },
+            "responses": {
+                "200": { "description": "Profile updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } }
+            }
+        }
+    }
+  }
+}
