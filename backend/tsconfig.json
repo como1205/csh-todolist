@@ -6,7 +6,7 @@
     "target": "es2020",
     "lib": ["es2020"],
     "moduleResolution": "node",
-    "types": ["node"],
+    "types": ["node", "jest"],
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,

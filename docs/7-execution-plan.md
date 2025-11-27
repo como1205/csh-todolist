@@ -19,10 +19,10 @@
 - **담당**: `backend-developer`
 - **설명**: Express.js, pg, TypeScript 기반의 백엔드 프로젝트를 설정합니다.
 - ✅ **완료 조건**:
-  - [ ] `npm init` 및 `package.json` 설정 완료
-  - [ ] Express, pg, @types/pg, TypeScript, ts-node 등 핵심 라이브러리 설치 완료
-  - [ ] `tsconfig.json` 파일 설정 완료
-  - [ ] pg Pool 연결 설정을 위한 `.env` 파일 준비
+  - [x] `npm init` 및 `package.json` 설정 완료
+  - [x] Express, pg, @types/pg, TypeScript, ts-node 등 핵심 라이브러리 설치 완료
+  - [x] `tsconfig.json` 파일 설정 완료
+  - [x] pg Pool 연결 설정을 위한 `.env` 파일 준비
 - 🔗 **의존성**: 없음
 
 **Task 1.2: 프론트엔드 프로젝트 초기화**
@@ -30,9 +30,9 @@
 - **담당**: `frontend-developer`
 - **설명**: Vite와 React, TypeScript를 사용하여 프론트엔드 SPA 프로젝트를 생성합니다.
 - ✅ **완료 조건**:
-  - [ ] `npm create vite@latest` 명령어로 React + TypeScript 프로젝트 생성 완료
-  - [ ] `react-router-dom`, `axios`, `zustand`, `tailwindcss` 등 PRD 기반 라이브러리 설치 완료
-  - [ ] Tailwind CSS 설정 (`tailwind.config.js`, `postcss.config.js`) 완료
+  - [x] `npm create vite@latest` 명령어로 React + TypeScript 프로젝트 생성 완료
+  - [x] `react-router-dom`, `axios`, `zustand`, `tailwindcss` 등 PRD 기반 라이브러리 설치 완료
+  - [x] Tailwind CSS 설정 (`tailwind.config.js`, `postcss.config.js`) 완료
 - 🔗 **의존성**: 없음 (Task 1.1과 병렬 진행 가능)
 
 **Task 1.3: 데이터베이스(Supabase) 설정**
@@ -51,10 +51,10 @@
 - **담당**: `backend-developer`
 - **설명**: `PRD 8장`의 데이터 모델을 SQL 스크립트로 작성하고, Supabase SQL Editor 또는 psql을 통해 DB에 적용합니다.
 - ✅ **완료 조건**:
-  - [ ] `database/schema.sql` 파일에 `users`, `todos`, `holidays` 테이블 DDL 작성 완료
-  - [ ] SQL 스크립트에 테이블 간 외래 키 관계(Foreign Key) 정의 완료
-  - [ ] Supabase SQL Editor 또는 psql을 사용하여 스크립트 실행 완료
-  - [ ] Supabase DB에 테이블, 컬럼, 인덱스, 제약조건 생성 확인
+  - [x] `database/schema.sql` 파일에 `users`, `todos`, `holidays` 테이블 DDL 작성 완료
+  - [x] SQL 스크립트에 테이블 간 외래 키 관계(Foreign Key) 정의 완료
+  - [x] Supabase SQL Editor 또는 psql을 사용하여 스크립트 실행 완료
+  - [x] Supabase DB에 테이블, 컬럼, 인덱스, 제약조건 생성 확인
 - 🔗 **의존성**: **Task 1.1**, **Task 1.3**
 
 ---
