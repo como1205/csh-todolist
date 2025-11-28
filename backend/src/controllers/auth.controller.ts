@@ -12,7 +12,7 @@ export class AuthController {
 
       const user = await AuthService.register(userData);
 
-      console.log(`[REGISTER] SUCCESS - User: ${user.user.userId}, Email: ${user.user.email}`);
+      console.log(`[REGISTER] SUCCESS - User: ${user.userId}, Email: ${user.email}`);
 
       res.status(201).json({
         success: true,
