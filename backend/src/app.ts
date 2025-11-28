@@ -7,7 +7,7 @@ import { errorHandler } from "./middlewares/errorHandler";
 import apiRoutes from "./routes";
 import { swaggerSpec } from "./config/swagger";
 
-// 미들웨어 설정!!!!
+// 미들웨어 설정!!!!!수정
 const app = express();
 
 app.use(helmet());
