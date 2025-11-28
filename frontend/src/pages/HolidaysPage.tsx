@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useHolidayStore } from '@/stores/holidayStore';
-import { Button, Input } from '@/components/ui';
-import type { Holiday } from '@/types';
 
 export default function HolidaysPage() {
   const { holidays, isLoading, error, fetchHolidays } = useHolidayStore();

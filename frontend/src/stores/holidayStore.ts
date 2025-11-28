@@ -15,7 +15,7 @@ interface HolidayState {
   clearError: () => void;
 }
 
-export const useHolidayStore = create<HolidayState>((set, get) => ({
+export const useHolidayStore = create<HolidayState>((set) => ({
   holidays: [],
   isLoading: false,
   error: null,
