@@ -161,13 +161,12 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const restoredTodo = await todoService.restoreTodo(id);
+      await todoService.restoreTodo(id);
 
-      // 목록에서 제거하거나 상태 업데이트
+      // 휴지통(deleted) 목록에서는 제거
+      // (복원된 할일은 status가 'active'로 변경되므로 휴지통에서 사라져야 함)
       set((state) => ({
-        todos: state.todos.map((todo) =>
-          todo.todoId === id ? restoredTodo : todo
-        ),
+        todos: state.todos.filter((todo) => todo.todoId !== id),
         isLoading: false,
       }));
     } catch (error) {

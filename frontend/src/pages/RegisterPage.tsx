@@ -34,22 +34,26 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
   });
 
-  // 이미 로그인되어 있으면 메인 페이지로 리다이렉트
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/');
-    }
-  }, [isAuthenticated, navigate]);
-
   // 회원가입 성공 시 로그인 페이지로 리다이렉트
+  // (회원가입 API는 자동 로그인하지만, 사용자에게 명시적 로그인 유도)
   useEffect(() => {
     if (registerSuccess) {
       const timer = setTimeout(() => {
+        // 회원가입 성공 후 로그인 페이지로 이동하기 전 상태 초기화
+        clearError();
         navigate('/login');
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [registerSuccess, navigate]);
+  }, [registerSuccess, navigate, clearError]);
+
+  // 이미 로그인되어 있으면 메인 페이지로 리다이렉트
+  // (단, 회원가입 성공 메시지 표시 중에는 제외)
+  useEffect(() => {
+    if (isAuthenticated && !registerSuccess) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate, registerSuccess]);
 
   // 컴포넌트 언마운트 시 에러 초기화
   useEffect(() => {

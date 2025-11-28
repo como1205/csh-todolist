@@ -26,3 +26,13 @@ export interface Todo {
   updatedAt: string;
   deletedAt?: string;
 }
+
+export interface Holiday {
+  holidayId: string;
+  title: string;
+  date: string;
+  description?: string;
+  isRecurring: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
