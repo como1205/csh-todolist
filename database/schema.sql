@@ -2,17 +2,19 @@
 -- csh-TodoList Database Schema
 -- ============================================
 -- 프로젝트명: csh-TodoList
--- 버전: 1.0
+-- 버전: 1.1
 -- 작성일: 2025-11-26
--- 데이터베이스: PostgreSQL 15+ (Supabase)
+-- 최종 수정: 2025-11-28
+-- 데이터베이스: PostgreSQL 15+ (로컬)
 -- ORM: Prisma
 -- 인코딩: UTF-8
 --
 -- 사용 방법:
---   1. Supabase SQL Editor에서 실행
---   2. 또는 psql 클라이언트에서 실행:
---      psql -h HOST -U USER -d DATABASE -f schema.sql
+--   1. psql 클라이언트에서 실행:
+--      psql -h localhost -U postgres -d csh_todolist -f schema.sql
+--   2. 또는 PostgreSQL GUI 도구(pgAdmin, DBeaver 등)에서 실행
 --   3. 환경변수 DATABASE_URL 설정 후 Prisma 사용
+--      DATABASE_URL=postgresql://postgres:postgres@localhost:5432/csh_todolist
 --
 -- 주의사항:
 --   - 이 스크립트는 기존 테이블을 삭제합니다 (DROP TABLE IF EXISTS)

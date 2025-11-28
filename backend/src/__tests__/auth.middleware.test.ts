@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
 import { authenticateToken } from '../middlewares/auth.middleware';
 import { pool } from '../config/database';
+import { QueryResult } from 'pg';
 
 // JWT 비밀키 설정
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_access_secret';
@@ -30,7 +31,7 @@ describe('Auth Middleware', () => {
       email: 'test@example.com',
       role: 'user'
     };
-    
+
     const token = jwt.sign(
       { userId: mockUser.userId, email: mockUser.email, role: mockUser.role },
       JWT_SECRET,
@@ -42,9 +43,14 @@ describe('Auth Middleware', () => {
     };
 
     // 데이터베이스 쿼리 모킹
-    jest.spyOn(pool, 'query').mockResolvedValue({
-      rows: [mockUser]
-    } as any);
+    const mockResult: QueryResult<any> = {
+      rows: [mockUser],
+      command: 'SELECT',
+      rowCount: 1,
+      oid: 0,
+      fields: []
+    };
+    jest.spyOn(pool, 'query').mockImplementation(() => Promise.resolve(mockResult));
 
     await authenticateToken(mockReq as Request, mockRes as Response, mockNext);
 
@@ -128,9 +134,14 @@ describe('Auth Middleware', () => {
     };
 
     // 사용자가 존재하지 않는 경우를 모킹
-    jest.spyOn(pool, 'query').mockResolvedValue({
-      rows: []
-    } as any);
+    const mockEmptyResult: QueryResult<any> = {
+      rows: [],
+      command: 'SELECT',
+      rowCount: 0,
+      oid: 0,
+      fields: []
+    };
+    jest.spyOn(pool, 'query').mockImplementation(() => Promise.resolve(mockEmptyResult));
 
     await authenticateToken(mockReq as Request, mockRes as Response, mockNext);
 

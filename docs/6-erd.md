@@ -1,8 +1,9 @@
 # csh-TodoList 데이터 모델 (ERD)
 
-**버전**: 1.0
+**버전**: 1.1
 **작성일**: 2025-11-26
-**상태**: 최종
+**최종 수정일**: 2025-11-28
+**상태**: 최종 (실제 DB 스키마 검증 완료)
 **작성자**: Claude
 **참조 문서**:
 - [도메인 정의서](./1-domain-definition.md)
@@ -32,13 +33,16 @@
 ### 1.2 데이터베이스 정보
 
 - **DBMS**: PostgreSQL 15+
-- **호스팅**: Supabase
+- **호스팅**: 로컬 PostgreSQL (localhost:5432)
+- **데이터베이스명**: csh_todolist
 - **Driver**: pg (node-postgres)
 - **주요 특징**:
-  - UUID 기반 Primary Key
+  - UUID 기반 Primary Key (uuid_generate_v4)
+  - ENUM 타입 사용 (Role, TodoStatus)
   - 소프트 삭제 지원 (Soft Delete)
-  - 타임스탬프 자동 관리
+  - 타임스탬프 자동 관리 (TIMESTAMP WITHOUT TIME ZONE)
   - 외래키 제약조건 (ON DELETE CASCADE)
+  - Row Level Security (RLS) 활성화
 
 ### 1.3 엔티티 개요
 
@@ -63,7 +67,7 @@ erDiagram
         varchar email UK "로그인 이메일"
         varchar password "bcrypt 해시된 비밀번호"
         varchar username "사용자 이름"
-        enum role "사용자 역할 (user/admin)"
+        enum role "사용자 역할 (USER/ADMIN)"
         timestamp createdAt "가입일시"
         timestamp updatedAt "최종 수정일시"
     }
@@ -75,7 +79,7 @@ erDiagram
         text content "할일 상세 내용"
         date startDate "시작일"
         date dueDate "만료일"
-        enum status "할일 상태 (active/completed/deleted)"
+        enum status "할일 상태 (ACTIVE/COMPLETED/DELETED)"
         boolean isCompleted "완료 여부"
         timestamp createdAt "생성일시"
         timestamp updatedAt "최종 수정일시"
@@ -155,11 +159,11 @@ erDiagram
 
 | 필드명 | 타입 | 제약조건 | 기본값 | NULL 허용 | 설명 |
 |--------|------|----------|--------|-----------|------|
-| **userId** | UUID | PK | uuid() | NO | 사용자 고유 ID (Primary Key) |
+| **userId** | UUID | PK | uuid_generate_v4() | NO | 사용자 고유 ID (Primary Key) |
 | **email** | VARCHAR(255) | UNIQUE, NOT NULL | - | NO | 로그인용 이메일 주소 (고유값) |
 | **password** | VARCHAR(255) | NOT NULL | - | NO | bcrypt 해시된 비밀번호 (salt rounds: 10) |
 | **username** | VARCHAR(100) | NOT NULL | - | NO | 사용자 표시 이름 |
-| **role** | ENUM('user', 'admin') | NOT NULL | 'user' | NO | 사용자 역할 (일반/관리자) |
+| **role** | Role ENUM | NOT NULL | 'USER' | NO | 사용자 역할 (USER/ADMIN) |
 | **createdAt** | TIMESTAMP | NOT NULL | now() | NO | 계정 생성일시 (자동 생성) |
 | **updatedAt** | TIMESTAMP | NOT NULL | now() | NO | 최종 수정일시 (자동 갱신) |
 
@@ -191,13 +195,13 @@ erDiagram
 
 | 필드명 | 타입 | 제약조건 | 기본값 | NULL 허용 | 설명 |
 |--------|------|----------|--------|-----------|------|
-| **todoId** | UUID | PK | uuid() | NO | 할일 고유 ID (Primary Key) |
+| **todoId** | UUID | PK | uuid_generate_v4() | NO | 할일 고유 ID (Primary Key) |
 | **userId** | UUID | FK, NOT NULL, INDEX | - | NO | 할일 소유자 ID (User.userId 참조) |
 | **title** | VARCHAR(200) | NOT NULL | - | NO | 할일 제목 (필수 입력) |
 | **content** | TEXT | - | - | YES | 할일 상세 내용 (선택 입력) |
 | **startDate** | DATE | - | - | YES | 할일 시작일 (선택) |
 | **dueDate** | DATE | CHECK | - | YES | 할일 만료일 (startDate 이후여야 함) |
-| **status** | ENUM('active', 'completed', 'deleted') | NOT NULL, INDEX | 'active' | NO | 할일 상태 |
+| **status** | TodoStatus ENUM | NOT NULL, INDEX | 'ACTIVE' | NO | 할일 상태 (ACTIVE/COMPLETED/DELETED) |
 | **isCompleted** | BOOLEAN | NOT NULL | false | NO | 완료 여부 플래그 |
 | **createdAt** | TIMESTAMP | NOT NULL | now() | NO | 할일 생성일시 (자동 생성) |
 | **updatedAt** | TIMESTAMP | NOT NULL | now() | NO | 최종 수정일시 (자동 갱신) |
@@ -207,9 +211,9 @@ erDiagram
 
 | 상태값 | 설명 | UI 표시 |
 |--------|------|---------|
-| **active** | 활성 상태의 할일 | 일반 목록에 표시 |
-| **completed** | 완료된 할일 | 완료 표시와 함께 목록에 표시 |
-| **deleted** | 삭제된 할일 (휴지통) | 휴지통에만 표시 |
+| **ACTIVE** | 활성 상태의 할일 | 일반 목록에 표시 |
+| **COMPLETED** | 완료된 할일 | 완료 표시와 함께 목록에 표시 |
+| **DELETED** | 삭제된 할일 (휴지통) | 휴지통에만 표시 |
 
 #### 3.2.3 비즈니스 규칙
 
@@ -245,7 +249,7 @@ erDiagram
 
 | 필드명 | 타입 | 제약조건 | 기본값 | NULL 허용 | 설명 |
 |--------|------|----------|--------|-----------|------|
-| **holidayId** | UUID | PK | uuid() | NO | 국경일 고유 ID (Primary Key) |
+| **holidayId** | UUID | PK | uuid_generate_v4() | NO | 국경일 고유 ID (Primary Key) |
 | **title** | VARCHAR(100) | NOT NULL | - | NO | 국경일 이름 (예: "신정", "설날") |
 | **date** | DATE | NOT NULL, INDEX | - | NO | 국경일 날짜 |
 | **description** | TEXT | - | - | YES | 국경일 설명 (선택) |
@@ -462,16 +466,16 @@ CHECK ("dueDate" IS NULL OR "startDate" IS NULL OR "dueDate" >= "startDate");
 
 | 테이블 | 컬럼 | 기본값 | 설명 |
 |--------|------|--------|------|
-| User | userId | uuid() | UUID 자동 생성 |
-| User | role | 'user' | 일반 사용자 역할 |
+| User | userId | uuid_generate_v4() | UUID 자동 생성 |
+| User | role | 'USER' | 일반 사용자 역할 |
 | User | createdAt | now() | 현재 시각 |
 | User | updatedAt | now() | 현재 시각 |
-| Todo | todoId | uuid() | UUID 자동 생성 |
-| Todo | status | 'active' | 활성 상태 |
+| Todo | todoId | uuid_generate_v4() | UUID 자동 생성 |
+| Todo | status | 'ACTIVE' | 활성 상태 |
 | Todo | isCompleted | false | 미완료 |
 | Todo | createdAt | now() | 현재 시각 |
 | Todo | updatedAt | now() | 현재 시각 |
-| Holiday | holidayId | uuid() | UUID 자동 생성 |
+| Holiday | holidayId | uuid_generate_v4() | UUID 자동 생성 |
 | Holiday | isRecurring | true | 매년 반복 |
 | Holiday | createdAt | now() | 현재 시각 |
 | Holiday | updatedAt | now() | 현재 시각 |
@@ -484,16 +488,27 @@ CHECK ("dueDate" IS NULL OR "startDate" IS NULL OR "dueDate" >= "startDate");
 
 ```sql
 -- ============================================
+-- Extension 설정
+-- ============================================
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ============================================
+-- Enum 타입 생성
+-- ============================================
+CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
+CREATE TYPE "TodoStatus" AS ENUM ('ACTIVE', 'COMPLETED', 'DELETED');
+
+-- ============================================
 -- User 테이블
 -- ============================================
 CREATE TABLE users (
-  "userId"    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "userId"    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "email"     VARCHAR(255) UNIQUE NOT NULL,
   "password"  VARCHAR(255) NOT NULL,
   "username"  VARCHAR(100) NOT NULL,
-  "role"      VARCHAR(10) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
-  "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
-  "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
+  "role"      "Role" NOT NULL DEFAULT 'USER',
+  "createdAt" TIMESTAMP(6) NOT NULL DEFAULT NOW(),
+  "updatedAt" TIMESTAMP(6) NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX "IX_User_role" ON users(role);
@@ -707,21 +722,34 @@ ORDER BY date ASC;
 
 ### B. 데이터베이스 생성 SQL
 
+실제 데이터베이스 스키마는 `database/schema.sql` 파일을 참조하세요.
+
 ```sql
+-- ============================================
+-- Extension 설정
+-- ============================================
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ============================================
+-- Enum 타입 생성
+-- ============================================
+CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
+CREATE TYPE "TodoStatus" AS ENUM ('ACTIVE', 'COMPLETED', 'DELETED');
+
 -- ============================================
 -- User 테이블
 -- ============================================
 CREATE TABLE users (
-  "userId"    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "userId"    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "email"     VARCHAR(255) UNIQUE NOT NULL,
   "password"  VARCHAR(255) NOT NULL,
   "username"  VARCHAR(100) NOT NULL,
-  "role"      VARCHAR(10) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
-  "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
-  "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
+  "role"      "Role" NOT NULL DEFAULT 'USER',
+  "createdAt" TIMESTAMP(6) NOT NULL DEFAULT NOW(),
+  "updatedAt" TIMESTAMP(6) NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX "IX_User_role" ON users(role);
+CREATE INDEX "IX_User_role" ON users("role");
 
 -- ============================================
 -- Todo 테이블
@@ -786,6 +814,7 @@ CREATE TRIGGER update_holidays_updated_at BEFORE UPDATE ON holidays
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|----------|--------|
 | 1.0 | 2025-11-26 | ERD 문서 초안 작성 | Claude |
+| 1.1 | 2025-11-28 | 실제 DB 스키마와 정합성 검증 및 업데이트<br/>- ENUM 타입명 대문자로 수정 (Role, TodoStatus)<br/>- UUID 함수명 수정 (uuid_generate_v4)<br/>- TIMESTAMP 정밀도 명시 (TIMESTAMP(6))<br/>- 기본값 수정 (USER, ACTIVE 등)<br/>- 데이터베이스 정보 업데이트 (로컬 PostgreSQL) | Claude |
 
 ---
 
