@@ -10,6 +10,9 @@ import { swaggerSpec } from "./config/swagger";
 // 미들웨어 설정!!!!!수정
 const app = express();
 
+// Vercel/프록시 환경에서 실행 시 trust proxy 활성화
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
